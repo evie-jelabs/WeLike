@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronRight,
   Box,
+  Newspaper,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -114,6 +115,7 @@ export default function DashboardLayout({
             {[
               { href: "/tools/social-listening", label: "Social Listening", icon: Radio },
               { href: "/tools/kol-pricer", label: "KOL Pricer", icon: DollarSign },
+              { href: "/tools/news", label: "AI News", icon: Newspaper },
             ].map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               const Icon = item.icon;

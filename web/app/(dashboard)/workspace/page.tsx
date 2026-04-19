@@ -1,7 +1,7 @@
 "use client";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
-import { Radio, DollarSign, ArrowRight, ChevronRight, Globe } from "lucide-react";
+import { Radio, DollarSign, Newspaper, ArrowRight, ChevronRight, Globe } from "lucide-react";
 
 const TOOLS = [
   {
@@ -34,6 +34,21 @@ const TOOLS = [
     ],
     color: "brand",
   },
+  {
+    id: "news",
+    href: "/tools/news",
+    icon: Newspaper,
+    name: "AI News",
+    description:
+      "Daily AI intelligence powered by Kimi web search. Track news, funding rounds, growth insights, and new AI tools — with Telegram push support.",
+    features: [
+      "Daily news timeline",
+      "Funding & growth insights",
+      "AI tool picks",
+      "Telegram push & scheduler",
+    ],
+    color: "cyan",
+  },
 ];
 
 const COLOR_MAP: Record<string, { bg: string; border: string; icon: string; badge: string }> = {
@@ -48,6 +63,12 @@ const COLOR_MAP: Record<string, { bg: string; border: string; icon: string; badg
     border: "border-brand-500/20 hover:border-brand-500/40",
     icon: "bg-brand-500/10 text-brand-500",
     badge: "bg-brand-500/10 text-brand-500",
+  },
+  cyan: {
+    bg: "bg-cyan-500/5",
+    border: "border-cyan-500/20 hover:border-cyan-500/40",
+    icon: "bg-cyan-500/10 text-cyan-400",
+    badge: "bg-cyan-500/10 text-cyan-400",
   },
 };
 
