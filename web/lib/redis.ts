@@ -34,6 +34,7 @@ export async function setCache(key: string, value: unknown, ttl: number = CACHE_
   }
 }
 
+// PRD-specified cache key format: articles:YYYY-MM-DD
 export function dailyKey(date: string) {
-  return `daily:${date}`;
+  return `articles:${date}`;
 }

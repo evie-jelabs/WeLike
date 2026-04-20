@@ -15,7 +15,7 @@ export default function DailyCase({ article, lang }: Props) {
   return (
     <section className="mb-10">
       <h2 className="text-xs font-bold uppercase tracking-widest text-brand-500 mb-5">
-        🔍 {lang === 'zh' ? '案例拆解' : 'Daily Case'}
+        📚 {lang === 'zh' ? '案例拆解' : 'Daily Case'}
       </h2>
       <article className="rounded-xl bg-gradient-to-br from-surface-900 to-brand-500/5 border border-brand-500/20 p-7">
         <h3 className="text-lg font-bold text-white leading-snug mb-4">{title}</h3>

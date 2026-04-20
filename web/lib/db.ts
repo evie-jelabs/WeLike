@@ -38,6 +38,16 @@ export async function getDailyContent(date: string): Promise<DailyContent> {
   return grouped;
 }
 
+export async function getMostRecentDate(): Promise<string | null> {
+  const rows = await query<{ date: string }>(
+    `SELECT date::text FROM articles
+     WHERE published_at IS NOT NULL
+     ORDER BY date DESC
+     LIMIT 1`
+  );
+  return rows[0]?.date ?? null;
+}
+
 export async function getCandidates(status = 'pending'): Promise<ContentCandidate[]> {
   return query<ContentCandidate>(
     `SELECT * FROM content_candidates

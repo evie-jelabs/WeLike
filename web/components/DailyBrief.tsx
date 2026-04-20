@@ -11,7 +11,7 @@ export default function DailyBrief({ articles, lang }: Props) {
   return (
     <section className="mb-10">
       <h2 className="text-xs font-bold uppercase tracking-widest text-brand-500 mb-5">
-        📰 {lang === 'zh' ? '每日要闻' : 'Daily Brief'}
+        📅 {lang === 'zh' ? '每日要闻' : 'Daily Brief'}
       </h2>
       <div className="space-y-5">
         {articles.map((a, i) => {
