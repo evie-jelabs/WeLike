@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-const FILE = path.join(process.cwd(), "schedule.json");
+// Use /tmp on Vercel (ephemeral but writable); fall back to cwd for local dev
+const FILE = process.env.VERCEL
+  ? '/tmp/schedule.json'
+  : path.join(process.cwd(), 'schedule.json');
 
 type Schedule = {
   enabled: boolean; time: string; sections: string[];
@@ -10,9 +13,14 @@ type Schedule = {
 };
 
 function load(): Schedule {
-  const d: Schedule = { enabled: false, time: "09:00", sections: ["news"], lang: "zh", token: "", chatId: "", lastSentDate: "" };
-  try { if (fs.existsSync(FILE)) return { ...d, ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch {}
-  return d;
+  const defaults: Schedule = {
+    enabled: false, time: '09:00', sections: ['news'],
+    lang: 'zh', token: '', chatId: '', lastSentDate: '',
+  };
+  try {
+    if (fs.existsSync(FILE)) return { ...defaults, ...JSON.parse(fs.readFileSync(FILE, 'utf8')) };
+  } catch {}
+  return defaults;
 }
 
 export async function GET() {
@@ -22,6 +30,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  fs.writeFileSync(FILE, JSON.stringify({ ...load(), ...body }, null, 2));
+  try {
+    fs.writeFileSync(FILE, JSON.stringify({ ...load(), ...body }, null, 2));
+  } catch (err) {
+    console.error('[schedule] write failed:', err);
+    return NextResponse.json({ ok: false, error: 'Failed to save' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
