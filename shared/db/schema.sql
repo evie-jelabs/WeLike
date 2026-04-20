@@ -16,9 +16,13 @@ CREATE TABLE IF NOT EXISTS articles (
   so_what_en       TEXT,
   so_what_zh       TEXT,
   sources          JSONB       NOT NULL DEFAULT '[]',
+  extra            JSONB       NOT NULL DEFAULT '{}',
   published_at     TIMESTAMPTZ,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Idempotent migration for existing installations
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS extra JSONB NOT NULL DEFAULT '{}';
 
 CREATE INDEX IF NOT EXISTS articles_date_section
   ON articles (date DESC, section, order_in_section);

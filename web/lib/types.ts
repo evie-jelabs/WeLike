@@ -2,6 +2,20 @@ export type Lang            = 'en' | 'zh';
 export type Section         = 'daily_brief' | 'growth_insight' | 'launch_radar' | 'daily_case';
 export type CandidateStatus = 'pending' | 'approved' | 'rejected' | 'published';
 
+export interface ArticleExtra {
+  // GrowthInsight
+  author?: string;
+  context_en?: string;
+  context_zh?: string;
+  // LaunchRadar
+  platform_data?: string;
+  positioning_en?: string;
+  positioning_zh?: string;
+  // DailyCase
+  breakdown_en?: string;
+  breakdown_zh?: string;
+}
+
 export interface Article {
   id: string;
   date: string;
@@ -14,6 +28,7 @@ export interface Article {
   so_what_en?: string | null;
   so_what_zh?: string | null;
   sources: string[];
+  extra: ArticleExtra;
   published_at?: string | null;
   created_at: string;
 }
