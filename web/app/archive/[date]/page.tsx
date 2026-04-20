@@ -1,8 +1,7 @@
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getDailyContent } from '@/lib/db';
 import { getCache, setCache, dailyKey, CACHE_TTL } from '@/lib/redis';
-import { detectLang, parseLangParam } from '@/lib/i18n';
+import { parseLangParam } from '@/lib/i18n';
 import Layout from '@/components/Layout';
 import DailyBrief from '@/components/DailyBrief';
 import GrowthInsight from '@/components/GrowthInsight';
@@ -27,9 +26,7 @@ export default async function ArchivePage({ params, searchParams }: Props) {
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
 
-  const headersList = headers();
-  const acceptLang  = headersList.get('accept-language');
-  const lang: Lang  = parseLangParam(searchParams.lang) ?? detectLang(acceptLang);
+  const lang: Lang = parseLangParam(searchParams.lang) ?? 'en';
 
   const cacheKey = dailyKey(date);
   let content = await getCache<DailyContent>(cacheKey);

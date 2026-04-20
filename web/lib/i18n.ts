@@ -4,7 +4,8 @@ export type { Lang };
 
 export function detectLang(acceptLanguage?: string | null): Lang {
   if (!acceptLanguage) return 'en';
-  return acceptLanguage.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  // Use includes to catch "en-US,zh-CN;q=0.9" style headers
+  return acceptLanguage.toLowerCase().includes('zh') ? 'zh' : 'en';
 }
 
 export function parseLangParam(param?: string | string[] | null): Lang | null {

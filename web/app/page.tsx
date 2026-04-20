@@ -1,10 +1,9 @@
-import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getDailyContent, getMostRecentDate } from '@/lib/db';
 import { getCache, setCache } from '@/lib/redis';
-import { detectLang, parseLangParam, UI_STRINGS } from '@/lib/i18n';
+import { parseLangParam, UI_STRINGS } from '@/lib/i18n';
 import DailyBrief    from '@/components/DailyBrief';
 import GrowthInsight from '@/components/GrowthInsight';
 import LaunchRadar   from '@/components/LaunchRadar';
@@ -61,7 +60,8 @@ async function fetchContent(date: string): Promise<DailyContent> {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const today   = new Date().toISOString().slice(0, 10);
   const date    = isValidDate(searchParams.date ?? '') ? searchParams.date! : today;
-  const dateStr = formatDate(date, 'en');
+  const lang: Lang = parseLangParam(searchParams.lang) ?? 'en';
+  const dateStr = formatDate(date, lang);
 
   return {
     title:       `AI Marketer Daily — ${dateStr}`,
@@ -82,9 +82,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage({ searchParams }: Props) {
-  // Resolve language (URL param > Accept-Language > default 'en')
-  const acceptLang = headers().get('accept-language');
-  const lang: Lang = parseLangParam(searchParams.lang) ?? detectLang(acceptLang);
+  // Middleware guarantees ?lang= is always injected; URL param > cookie > Accept-Language
+  const lang: Lang = parseLangParam(searchParams.lang) ?? 'en';
   const s          = UI_STRINGS[lang];
 
   // Resolve date

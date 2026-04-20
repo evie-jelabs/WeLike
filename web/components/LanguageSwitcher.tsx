@@ -12,6 +12,8 @@ export default function LanguageSwitcher({ current }: Props) {
   const searchParams = useSearchParams();
 
   function switchLang(lang: Lang) {
+    // Write cookie client-side for double coverage (middleware also syncs server-side)
+    document.cookie = `lang=${lang}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
     const params = new URLSearchParams(searchParams.toString());
     params.set('lang', lang);
     router.push(`${pathname}?${params.toString()}`);
