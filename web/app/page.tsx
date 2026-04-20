@@ -134,10 +134,17 @@ export default async function HomePage({ searchParams }: Props) {
               {s.slogan}
             </p>
           </div>
-          {/* Language switcher — right corner, globally visible */}
-          <Suspense fallback={null}>
-            <LanguageSwitcher current={lang} />
-          </Suspense>
+          <div className="flex items-center gap-4 shrink-0">
+            <Link
+              href={`/archive?lang=${lang}`}
+              className="hidden sm:block text-xs text-surface-500 hover:text-white transition-colors"
+            >
+              {lang === 'zh' ? '历史归档' : 'Archive'}
+            </Link>
+            <Suspense fallback={null}>
+              <LanguageSwitcher current={lang} />
+            </Suspense>
+          </div>
         </div>
       </header>
 

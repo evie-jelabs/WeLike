@@ -48,6 +48,15 @@ export async function getMostRecentDate(): Promise<string | null> {
   return rows[0]?.date ?? null;
 }
 
+export async function getPublishedDates(): Promise<string[]> {
+  const rows = await query<{ date: string }>(
+    `SELECT DISTINCT date::text FROM articles
+     WHERE published_at IS NOT NULL
+     ORDER BY date DESC`
+  );
+  return rows.map(r => r.date);
+}
+
 export async function getCandidates(status = 'pending'): Promise<ContentCandidate[]> {
   return query<ContentCandidate>(
     `SELECT * FROM content_candidates
