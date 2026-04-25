@@ -1,242 +1,172 @@
-import { Suspense } from 'react';
-import Link from 'next/link';
-import type { Metadata } from 'next';
-import { getDailyContent, getMostRecentDate } from '@/lib/db';
-import { getCache, setCache } from '@/lib/redis';
-import { parseLangParam, UI_STRINGS } from '@/lib/i18n';
-import DailyBrief    from '@/components/DailyBrief';
-import GrowthInsight from '@/components/GrowthInsight';
-import LaunchRadar   from '@/components/LaunchRadar';
-import DailyCase     from '@/components/DailyCase';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import type { Lang, DailyContent } from '@/lib/types';
+"use client";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { useEffect } from "react";
+import { ArrowRight, Zap, Eye, BarChart3, Radio, BookOpen, Code, Users } from "lucide-react";
+import Link from "next/link";
 
-const CACHE_TTL = 24 * 60 * 60; // 24 h — PRD cache key: articles:YYYY-MM-DD
+export default function Home() {
+  const { user, productContext, isLoading } = useAuth();
+  const router = useRouter();
 
-interface Props {
-  searchParams: { date?: string; lang?: string };
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function isValidDate(s: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
-}
-
-function offsetDate(date: string, days: number): string {
-  const d = new Date(date + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function formatDate(date: string, lang: Lang): string {
-  return new Date(date + 'T00:00:00Z').toLocaleDateString(
-    lang === 'zh' ? 'zh-CN' : 'en-GB',
-    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  );
-}
-
-function hasAnyContent(c: DailyContent): boolean {
-  return !!(
-    c.daily_brief.length ||
-    c.growth_insight.length ||
-    c.launch_radar.length ||
-    c.daily_case.length
-  );
-}
-
-async function fetchContent(date: string): Promise<DailyContent> {
-  const key    = `articles:${date}`;
-  const cached = await getCache<DailyContent>(key);
-  if (cached) return cached;
-
-  const content = await getDailyContent(date);
-  if (hasAnyContent(content)) await setCache(key, content, CACHE_TTL);
-  return content;
-}
-
-// ── Metadata ─────────────────────────────────────────────────────────────────
-
-export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const today   = new Date().toISOString().slice(0, 10);
-  const date    = isValidDate(searchParams.date ?? '') ? searchParams.date! : today;
-  const lang: Lang = parseLangParam(searchParams.lang) ?? 'en';
-  const dateStr = formatDate(date, lang);
-
-  return {
-    title:       `AI Marketer Daily — ${dateStr}`,
-    description: 'The daily intelligence brief for AI marketers worldwide. 8 minutes a day. Free forever.',
-    openGraph: {
-      title:       `AI Marketer Daily — ${dateStr}`,
-      description: 'Daily AI marketing intelligence: news, growth insights, product launches, and case studies.',
-      type:        'website',
-    },
-    twitter: {
-      card:        'summary',
-      title:       `AI Marketer Daily — ${dateStr}`,
-      description: 'Daily AI marketing intelligence. 8 minutes a day.',
-    },
-  };
-}
-
-// ── Page ─────────────────────────────────────────────────────────────────────
-
-export default async function HomePage({ searchParams }: Props) {
-  // Middleware guarantees ?lang= is always injected; URL param > cookie > Accept-Language
-  const lang: Lang = parseLangParam(searchParams.lang) ?? 'en';
-  const s          = UI_STRINGS[lang];
-
-  // Resolve date
-  const today   = new Date().toISOString().slice(0, 10);
-  const reqDate = isValidDate(searchParams.date ?? '') ? searchParams.date! : today;
-
-  // Fetch content — with DB error handling so page never crashes
-  let content: DailyContent = {
-    date: reqDate, daily_brief: [], growth_insight: [], launch_radar: [], daily_case: [],
-  };
-  let dbError = false;
-
-  try {
-    content = await fetchContent(reqDate);
-
-    // Rule 4: if today has no content, fall back to most recent published date
-    if (!hasAnyContent(content) && reqDate === today) {
-      const recentDate = await getMostRecentDate();
-      if (recentDate && recentDate !== today) {
-        content = await fetchContent(recentDate);
-        // Redirect user to the actual date so the URL reflects reality
-        // (handled client-side via meta refresh — avoids server redirect issues)
+  useEffect(() => {
+    if (!isLoading && user) {
+      if (productContext) {
+        router.push("/workspace");
+      } else {
+        router.push("/onboarding");
       }
     }
-  } catch (err) {
-    console.error('[HomePage] DB/Redis error:', err);
-    dbError = true;
+  }, [user, productContext, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  const displayDate = content.date;
-  const prevDate    = offsetDate(displayDate, -1);
-  const nextDate    = offsetDate(displayDate, +1);
-  const isFuture    = nextDate > today;
-
   return (
-    <div className="min-h-screen bg-surface-950 text-surface-100">
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="border-b border-surface-800 sticky top-0 z-50 bg-surface-950/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <Link href={`/?lang=${lang}`} className="block">
-              <span className="text-sm font-bold tracking-tight text-white">
-                AI Marketer Daily
-              </span>
-            </Link>
-            <p className="mt-0.5 text-[11px] text-surface-500 leading-snug hidden sm:block max-w-xs">
-              {s.slogan}
-            </p>
+    <div className="min-h-screen bg-grid">
+      {/* Nav */}
+      <nav className="border-b border-surface-800">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-brand-500 flex items-center justify-center">
+              <span className="text-black font-bold text-sm">W</span>
+            </div>
+            <span className="text-lg font-semibold tracking-tight">WeLike</span>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3">
             <Link
-              href={`/archive?lang=${lang}`}
-              className="hidden sm:block text-xs text-surface-500 hover:text-white transition-colors"
+              href="/login"
+              className="text-sm text-surface-400 hover:text-white transition-colors px-4 py-2"
             >
-              {lang === 'zh' ? '历史归档' : 'Archive'}
+              Sign in
             </Link>
-            <Suspense fallback={null}>
-              <LanguageSwitcher current={lang} />
-            </Suspense>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Date bar ───────────────────────────────────────────────────── */}
-      <div className="border-b border-surface-800/50 bg-surface-900/30">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-2 flex items-center justify-between">
-          <time
-            dateTime={displayDate}
-            className="text-[11px] font-medium text-surface-400 tracking-wide"
-          >
-            {formatDate(displayDate, lang)}
-          </time>
-          <span className="text-[11px] text-surface-600">{s.min_read}</span>
-        </div>
-      </div>
-
-      {/* ── Main content ───────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-2xl px-4 sm:px-6">
-        {dbError ? (
-          <div className="py-20 text-center">
-            <p className="text-surface-600 text-sm">
-              {lang === 'zh' ? '内容加载失败，请稍后重试。' : 'Failed to load content. Please try again later.'}
-            </p>
-          </div>
-        ) : !hasAnyContent(content) ? (
-          <div className="py-20 text-center">
-            <p className="text-surface-600 text-sm">{s.no_content}</p>
-          </div>
-        ) : (
-          /*
-           * Section order is fixed per PRD 4.2:
-           * 📅 Daily Brief → 💡 Growth Insight → 🚀 Launch Radar → 📚 Daily Case
-           * Dividers: <hr> between every pair of sections
-           */
-          <div className="divide-y divide-surface-800">
-            {/* 1. Daily Brief */}
-            <section className="py-8">
-              <DailyBrief articles={content.daily_brief} lang={lang} />
-            </section>
-
-            {/* 2. Growth Insight */}
-            <section className="py-8">
-              <GrowthInsight articles={content.growth_insight} lang={lang} />
-            </section>
-
-            {/* 3. Launch Radar */}
-            <section className="py-8">
-              <LaunchRadar articles={content.launch_radar} lang={lang} />
-            </section>
-
-            {/* 4. Daily Case */}
-            <section className="py-8">
-              <DailyCase article={content.daily_case[0] ?? null} lang={lang} />
-            </section>
-          </div>
-        )}
-      </main>
-
-      {/* ── Date navigation ────────────────────────────────────────────── */}
-      <nav
-        aria-label={lang === 'zh' ? '日期导航' : 'Date navigation'}
-        className="border-t border-surface-800 mt-4"
-      >
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-5 flex items-center justify-between">
-          <Link
-            href={`/?date=${prevDate}&lang=${lang}`}
-            className="group flex items-center gap-2 text-sm text-surface-500 hover:text-white transition-colors"
-          >
-            <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
-            <span>{s.prev_day}</span>
-          </Link>
-
-          {!isFuture && (
             <Link
-              href={`/?date=${nextDate}&lang=${lang}`}
-              className="group flex items-center gap-2 text-sm text-surface-500 hover:text-white transition-colors"
+              href="/register"
+              className="text-sm bg-brand-500 text-black font-medium px-4 py-2 rounded-lg hover:bg-brand-400 transition-colors"
             >
-              <span>{s.next_day}</span>
-              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+              Get started
             </Link>
-          )}
+          </div>
         </div>
       </nav>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
+      {/* Hero */}
+      <section className="mx-auto max-w-6xl px-6 pt-24 pb-20">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 bg-surface-900 border border-surface-800 rounded-full px-4 py-1.5 mb-6">
+            <div className="h-1.5 w-1.5 rounded-full bg-brand-500 animate-pulse" />
+            <span className="text-xs text-surface-400">GTM Workspace for AI Products</span>
+          </div>
+          <h1 className="text-5xl font-bold leading-tight tracking-tight mb-6">
+            Your AI is groundbreaking.
+            <br />
+            <span className="text-gradient">Your GTM should be too.</span>
+          </h1>
+          <p className="text-lg text-surface-400 leading-relaxed mb-10 max-w-2xl">
+            WeLike is the GTM workspace for AI products.
+            Battle-tested playbooks and tools from 100+ launches.
+          </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 bg-brand-500 text-black font-semibold px-6 py-3 rounded-lg hover:bg-brand-400 transition-colors"
+            >
+              Start for free <ArrowRight className="h-4 w-4" />
+            </Link>
+            <span className="text-sm text-surface-500">No credit card required</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Why WeLike */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[
+            {
+              icon: Code,
+              title: "Built for AI products, not generic SaaS",
+              desc: "We understand developer marketing, GitHub presence, API docs, open-source dynamics, and dev community engagement — because that's all we do.",
+            },
+            {
+              icon: BookOpen,
+              title: "Playbooks from 100+ launches",
+              desc: "Every tool encodes real GTM know-how from JE Labs' experience launching frontier AI projects — not theoretical frameworks.",
+            },
+            {
+              icon: Users,
+              title: "Tools + strategy, not just dashboards",
+              desc: "Go beyond analytics. Get actionable GTM plans, positioning strategies, and ready-to-ship content — all informed by what actually works.",
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="bg-surface-900 border border-surface-800 rounded-xl p-6 hover:border-brand-500/30 transition-colors"
+            >
+              <div className="h-10 w-10 rounded-lg bg-brand-500/10 flex items-center justify-center mb-4">
+                <f.icon className="h-5 w-5 text-brand-500" />
+              </div>
+              <h3 className="font-semibold mb-2 leading-snug">{f.title}</h3>
+              <p className="text-sm text-surface-400 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Tools */}
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-2">Your GTM toolkit</h2>
+          <p className="text-surface-400 text-sm">Every tool you need, from market research to launch day and beyond.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              icon: Eye,
+              title: "Scout",
+              desc: "Competitive intelligence & market signals, refreshed weekly.",
+            },
+            {
+              icon: Zap,
+              title: "AEO Optimizer",
+              desc: "Make your product discoverable by ChatGPT, Perplexity & Claude.",
+            },
+            {
+              icon: Radio,
+              title: "Social Listening",
+              desc: "Real-time sentiment tracking across X, Reddit & dev communities.",
+            },
+            {
+              icon: BarChart3,
+              title: "KOL Pricer",
+              desc: "Smart pricing benchmarks for influencer & KOL partnerships.",
+            },
+          ].map((f) => (
+            <div
+              key={f.title}
+              className="bg-surface-900 border border-surface-800 rounded-xl p-6 hover:border-surface-700 transition-colors group"
+            >
+              <div className="h-10 w-10 rounded-lg bg-surface-800 flex items-center justify-center mb-4 group-hover:bg-brand-500/10 transition-colors">
+                <f.icon className="h-5 w-5 text-brand-500" />
+              </div>
+              <h3 className="font-semibold mb-1.5">{f.title}</h3>
+              <p className="text-sm text-surface-400 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
       <footer className="border-t border-surface-800">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-surface-600">
-          <span>© {new Date().getFullYear()} AI Marketer Daily by JE Labs</span>
-          <span>{lang === 'zh' ? '仅供内部使用' : 'Internal use only'}</span>
+        <div className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
+          <p className="text-xs text-surface-500">&copy; 2026 WeLike by JE Labs</p>
+          <p className="text-xs text-surface-600">Built for the AI builders.</p>
         </div>
       </footer>
-
     </div>
   );
 }
